@@ -1,0 +1,50 @@
+# Entornos virtuales
+env/
+venv/
+ENV/
+*.env
+
+# Archivos de configuración del entorno
+*.env
+*.ini
+*.cfg
+*.json
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Bases de datos locales
+*.db
+*.sqlite3
+
+# Directorios de logs
+logs/
+*.log
+
+# Archivos temporales
+*.temp
+*.tmp
+
+# Archivos de pruebas
+.coverage
+.tox/
+.nox/
+.cache
+pytest_cache/
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de empaquetado
+dist/
+build/
+*.egg-info/
+
+# Otros archivos específicos de sistemas operativos
+.DS_Store
+Thumbs.db
