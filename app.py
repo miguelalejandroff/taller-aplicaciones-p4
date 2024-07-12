@@ -10,6 +10,77 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+@app.route('/register', methods=['POST'])
+def register_user():
+    data = request.get_json()
+    new_user = User(
+        rut=data['rut'],
+        nombres=data['nombres'],
+        primer_apellido=data['primerApellido'],
+        segundo_apellido=data.get('segundoApellido'),
+        email=data['email'],
+        direccion=data.get('direccion'),
+        comuna_id=data.get('comunaID'),
+        ciudad_id=data.get('ciudadID'),
+        centro_id=data.get('centroID'),
+        fecha_nacimiento=datetime.strptime(data['fechaNacimiento'], '%Y-%m-%d').date(),
+        telefono=data.get('telefono'),
+        role=data.get('role')  # Agregado campo de rol
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({"mensaje": f"Usuario {new_user.nombres} {new_user.primer_apellido} registrado exitosamente"}), 201
+
+@app.route('/login', methods=['POST'])
+def login_user():
+    data = request.get_json()
+    user = User.query.filter_by(email=data['email']).first()
+    if user and user.rut == data['rut']:
+        return jsonify({"mensaje": f"Inicio de sesión exitoso para el usuario {user.nombres}", "user": user.id, "role": user.role}), 200
+    return jsonify({"mensaje": "Credenciales inválidas"}), 401
+
+@app.route('/ayudantias', methods=['POST'])
+def create_ayudantia():
+    data = request.get_json()
+    new_ayudantia = Ayudantia(
+        user_id=data['userID'],
+        estado=data.get('estado')
+    )
+    db.session.add(new_ayudantia)
+    db.session.commit()
+    return jsonify({"mensaje": f"Ayudantía creada exitosamente con ID {new_ayudantia.id} para el usuario {new_ayudantia.user_id}", "id": new_ayudantia.id}), 201
+
+@app.route('/ayudantias/<int:ayudantia_id>/offer', methods=['POST'])
+def offer_ayudantia(ayudantia_id):
+    ayudantia = Ayudantia.query.get(ayudantia_id)
+    if ayudantia:
+        ayudantia.estado = 'ofrecida'
+        db.session.commit()
+        return jsonify({"mensaje": f"Ayudantía con ID {ayudantia.id} ofrecida exitosamente"}), 200
+    return jsonify({"mensaje": "Ayudantía no encontrada"}), 404
+
+@app.route('/ayudantias/<int:ayudantia_id>/accept', methods=['POST'])
+def accept_ayudantia(ayudantia_id):
+    ayudantia = Ayudantia.query.get(ayudantia_id)
+    if ayudantia:
+        ayudantia.estado = 'aceptada'
+        db.session.commit()
+        return jsonify({"mensaje": f"Ayudantía con ID {ayudantia.id} aceptada exitosamente"}), 200
+    return jsonify({"mensaje": "Ayudantía no encontrada"}), 404
+
+@app.route('/ayudantias/<int:ayudantia_id>/schedule', methods=['POST'])
+def schedule_session(ayudantia_id):
+    data = request.get_json()
+    new_session = Session(
+        ayudantia_id=ayudantia_id,
+        fecha=datetime.strptime(data['fecha'], '%Y-%m-%d').date(),
+        hora_inicio=datetime.strptime(data['horaInicio'], '%H:%M:%S').time(),
+        hora_fin=datetime.strptime(data['horaFin'], '%H:%M:%S').time()
+    )
+    db.session.add(new_session)
+    db.session.commit()
+    return jsonify({"mensaje": f"Sesión agendada exitosamente para la ayudantía con ID {ayudantia_id}", "id": new_session.id}), 201
+
 @app.route('/inscripcion_ayudantia', methods=['POST'])
 def create_inscripcion_ayudantia():
     data = request.get_json()
@@ -48,52 +119,27 @@ def create_feedback():
     db.session.commit()
     return jsonify({"mensaje": f"Feedback creado exitosamente para la sesión con ID {new_feedback.session_id}"}), 201
 
-
-@app.route('/ayudantias', methods=['GET'])
-def get_ayudantias():
-    ayudantias = Ayudantia.query.all()
+@app.route('/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
     result = []
-    for ayudantia in ayudantias:
-        ayudantia_data = {
-            'id': ayudantia.id,
-            'user_id': ayudantia.user_id,
-            'estado': ayudantia.estado,
-            'created_at': ayudantia.created_at,
-            'updated_at': ayudantia.updated_at
+    for user in users:
+        user_data = {
+            'id': user.id,
+            'rut': user.rut,
+            'nombres': user.nombres,
+            'primer_apellido': user.primer_apellido,
+            'segundo_apellido': user.segundo_apellido,
+            'email': user.email,
+            'direccion': user.direccion,
+            'comuna_id': user.comuna_id,
+            'ciudad_id': user.ciudad_id,
+            'centro_id': user.centro_id,
+            'fecha_nacimiento': user.fecha_nacimiento,
+            'telefono': user.telefono,
+            'role': user.role
         }
-        result.append(ayudantia_data)
-    return jsonify(result), 200
-
-@app.route('/asistencia_ayudantia', methods=['GET'])
-def get_asistencia_ayudantia():
-    asistencias = AsistenciaAyudantia.query.all()
-    result = []
-    for asistencia in asistencias:
-        asistencia_data = {
-            'id': asistencia.id,
-            'inscripcion_id': asistencia.inscripcion_id,
-            'estado': asistencia.estado,
-            'created_at': asistencia.created_at,
-            'updated_at': asistencia.updated_at
-        }
-        result.append(asistencia_data)
-    return jsonify(result), 200
-
-@app.route('/feedback', methods=['GET'])
-def get_feedback():
-    feedbacks = Feedback.query.all()
-    result = []
-    for feedback in feedbacks:
-        feedback_data = {
-            'id': feedback.id,
-            'session_id': feedback.session_id,
-            'user_id': feedback.user_id,
-            'calificacion': feedback.calificacion,
-            'comentario': feedback.comentario,
-            'created_at': feedback.created_at,
-            'updated_at': feedback.updated_at
-        }
-        result.append(feedback_data)
+        result.append(user_data)
     return jsonify(result), 200
 
 if __name__ == "__main__":
